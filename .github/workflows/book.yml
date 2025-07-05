@@ -1,8 +1,6 @@
 name: Book
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -16,7 +14,7 @@ jobs:
         with:
           fetch-depth: 0
       
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@nightly
 
       - uses: taiki-e/install-action@v2
         with:

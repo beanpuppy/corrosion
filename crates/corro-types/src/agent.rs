@@ -455,7 +455,7 @@ fn init_migration(tx: &Transaction) -> rusqlite::Result<()> {
                 site_id BLOB NOT NULL,
                 -- remote internal version
                 version INTEGER NOT NULL,
-                
+
                 -- start and end seq for this bookkept record
                 start_seq INTEGER NOT NULL,
                 end_seq INTEGER NOT NULL,
@@ -484,12 +484,12 @@ fn init_migration(tx: &Transaction) -> rusqlite::Result<()> {
 
                 PRIMARY KEY (site_id, db_version, version, seq)
             ) WITHOUT ROWID;
-            
+
             -- SWIM memberships
             CREATE TABLE __corro_members (
                 actor_id BLOB PRIMARY KEY NOT NULL,
                 address TEXT NOT NULL,
-            
+
                 state TEXT NOT NULL DEFAULT 'down',
                 foca_state JSON,
 
@@ -502,9 +502,9 @@ fn init_migration(tx: &Transaction) -> rusqlite::Result<()> {
                 type TEXT NOT NULL,
                 name TEXT NOT NULL,
                 sql TEXT NOT NULL,
-            
+
                 source TEXT NOT NULL,
-            
+
                 PRIMARY KEY (tbl_name, type, name)
             ) WITHOUT ROWID;
         "#,
@@ -1737,7 +1737,7 @@ impl Bookie {
         &self,
         label: &'static str,
         extra: E,
-    ) -> CountedTokioRwLockReadGuard<BookieInner> {
+    ) -> CountedTokioRwLockReadGuard<'_, BookieInner> {
         self.0.read(label, extra).await
     }
 
@@ -1745,7 +1745,7 @@ impl Bookie {
         &self,
         label: &'static str,
         extra: E,
-    ) -> CountedTokioRwLockWriteGuard<BookieInner> {
+    ) -> CountedTokioRwLockWriteGuard<'_, BookieInner> {
         self.0.write(label, extra).await
     }
 
@@ -1753,7 +1753,7 @@ impl Bookie {
         &self,
         label: &'static str,
         extra: E,
-    ) -> CountedTokioRwLockWriteGuard<BookieInner> {
+    ) -> CountedTokioRwLockWriteGuard<'_, BookieInner> {
         self.0.blocking_write(label, extra)
     }
 

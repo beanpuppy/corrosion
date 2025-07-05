@@ -31,11 +31,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install and Display Rust specified toolchain
-        run: rustup show
+      - name: Install Rust nightly toolchain
+        uses: dtolnay/rust-toolchain@nightly
 
       - name: Install rustfmt
-        run: rustup component add --toolchain nightly-2023-12-03-${{ matrix.target }} rustfmt
+        run: rustup component add rustfmt
 
       - name: Install cargo-nextest
         uses: taiki-e/install-action@v2
@@ -62,7 +62,7 @@ jobs:
     steps:
       - uses: actions/checkout@master
       
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@nightly
 
       - uses: taiki-e/install-action@v2
         with:

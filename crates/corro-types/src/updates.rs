@@ -34,7 +34,7 @@ pub trait Manager<H> {
 #[async_trait]
 pub trait Handle {
     fn id(&self) -> Uuid;
-    fn cancelled(&self) -> WaitForCancellationFuture;
+    fn cancelled(&self) -> WaitForCancellationFuture<'_>;
     fn filter_matchable_change(
         &self,
         candidates: &mut MatchCandidates,
@@ -84,7 +84,7 @@ impl Handle for UpdateHandle {
         self.inner.id
     }
 
-    fn cancelled(&self) -> WaitForCancellationFuture {
+    fn cancelled(&self) -> WaitForCancellationFuture<'_> {
         self.inner.cancel.cancelled()
     }
 

@@ -54,7 +54,7 @@ impl CrConn {
         Ok(Self(conn))
     }
 
-    pub fn immediate_transaction(&mut self) -> rusqlite::Result<Transaction> {
+    pub fn immediate_transaction(&mut self) -> rusqlite::Result<Transaction<'_>> {
         self.0
             .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
     }

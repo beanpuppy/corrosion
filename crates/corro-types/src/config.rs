@@ -62,6 +62,8 @@ pub struct Config {
 
     #[serde(default)]
     pub log: LogConfig,
+
+    #[cfg(feature = "consul")]
     #[serde(default)]
     pub consul: Option<ConsulConfig>,
 }
@@ -321,6 +323,7 @@ pub struct ConfigBuilder {
     log: Option<LogConfig>,
     schema_paths: Vec<Utf8PathBuf>,
     max_change_size: Option<i64>,
+    #[cfg(feature = "consul")]
     consul: Option<ConsulConfig>,
     tls: Option<TlsConfig>,
     perf: Option<PerfConfig>,
@@ -372,6 +375,7 @@ impl ConfigBuilder {
         self
     }
 
+    #[cfg(feature = "consul")]
     pub fn consul(mut self, config: ConsulConfig) -> Self {
         self.consul = Some(config);
         self
@@ -427,6 +431,7 @@ impl ConfigBuilder {
             telemetry,
             log: self.log.unwrap_or_default(),
 
+            #[cfg(feature = "consul")]
             consul: self.consul,
         })
     }
@@ -452,6 +457,7 @@ pub enum LogFormat {
     Json,
 }
 
+#[cfg(feature = "consul")]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct ConsulConfig {

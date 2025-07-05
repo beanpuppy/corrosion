@@ -680,6 +680,7 @@ mod tests {
 
     use crate::agent::setup;
 
+    #[allow(dead_code)]
     struct UnsyncBodyStream(std::pin::Pin<Box<UnsyncBoxBody<Bytes, axum::Error>>>);
 
     impl Stream for UnsyncBodyStream {
