@@ -242,7 +242,7 @@ mod tests {
                             Ok::<_, TestError>(())
                         }
                     }))
-                    .try_collect()
+                    .try_collect::<()>()
                     .await?;
                     Ok::<_, TestError>(())
                 })
@@ -251,7 +251,7 @@ mod tests {
             }
         }));
 
-        futs.try_collect().await?;
+        futs.try_collect::<()>().await?;
 
         let conn = pool.get().await?;
 

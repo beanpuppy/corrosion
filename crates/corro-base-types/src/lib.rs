@@ -24,7 +24,7 @@ impl From<Version> for u64 {
 }
 
 impl Step for Version {
-    fn steps_between(start: &Self, end: &Self) -> Option<usize> {
+    fn steps_between(start: &Self, end: &Self) -> (usize, Option<usize>) {
         u64::steps_between(&start.0, &end.0)
     }
 
@@ -109,7 +109,7 @@ impl fmt::Display for Version {
 pub struct CrsqlDbVersion(pub u64);
 
 impl Step for CrsqlDbVersion {
-    fn steps_between(start: &Self, end: &Self) -> Option<usize> {
+    fn steps_between(start: &Self, end: &Self) -> (usize, Option<usize>) {
         u64::steps_between(&start.0, &end.0)
     }
 
@@ -194,7 +194,7 @@ impl fmt::Display for CrsqlDbVersion {
 pub struct CrsqlSeq(pub u64);
 
 impl Step for CrsqlSeq {
-    fn steps_between(start: &Self, end: &Self) -> Option<usize> {
+    fn steps_between(start: &Self, end: &Self) -> (usize, Option<usize>) {
         u64::steps_between(&start.0, &end.0)
     }
 

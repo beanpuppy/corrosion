@@ -479,13 +479,15 @@ async fn setup_tls(pg: PgConfig) -> eyre::Result<(Option<TlsAcceptor>, bool)> {
     let key = if tls.key_file.extension().map_or(false, |x| x == "der") {
         rustls::PrivateKey(key)
     } else {
-        let pkcs8 = rustls_pemfile::pkcs8_private_keys(&mut &*key)?;
+        let pkcs8: Result<Vec<_>, _> = rustls_pemfile::pkcs8_private_keys(&mut &*key).collect();
+        let pkcs8 = pkcs8?;
         match pkcs8.into_iter().next() {
-            Some(x) => rustls::PrivateKey(x),
+            Some(x) => rustls::PrivateKey(x.secret_pkcs8_der().to_vec()),
             None => {
-                let rsa = rustls_pemfile::rsa_private_keys(&mut &*key)?;
+                let rsa: Result<Vec<_>, _> = rustls_pemfile::rsa_private_keys(&mut &*key).collect();
+                let rsa = rsa?;
                 match rsa.into_iter().next() {
-                    Some(x) => rustls::PrivateKey(x),
+                    Some(x) => rustls::PrivateKey(x.secret_pkcs1_der().to_vec()),
                     None => {
                         eyre::bail!("no private keys found");
                     }
@@ -498,10 +500,13 @@ async fn setup_tls(pg: PgConfig) -> eyre::Result<(Option<TlsAcceptor>, bool)> {
     let certs = if tls.cert_file.extension().map_or(false, |x| x == "der") {
         vec![rustls::Certificate(certs)]
     } else {
-        rustls_pemfile::certs(&mut &*certs)?
-            .into_iter()
-            .map(rustls::Certificate)
-            .collect()
+        {
+            let certs_result: Result<Vec<_>, _> = rustls_pemfile::certs(&mut &*certs).collect();
+            certs_result?
+                .into_iter()
+                .map(|cert| rustls::Certificate(cert.as_ref().to_vec()))
+                .collect()
+        }
     };
 
     let server_crypto = ServerConfig::builder().with_safe_defaults();
@@ -520,10 +525,14 @@ async fn setup_tls(pg: PgConfig) -> eyre::Result<(Option<TlsAcceptor>, bool)> {
         let ca_certs = if ca_file.extension().map_or(false, |x| x == "der") {
             vec![rustls::Certificate(ca_certs)]
         } else {
-            rustls_pemfile::certs(&mut &*ca_certs)?
-                .into_iter()
-                .map(rustls::Certificate)
-                .collect()
+            {
+                let ca_certs_result: Result<Vec<_>, _> =
+                    rustls_pemfile::certs(&mut &*ca_certs).collect();
+                ca_certs_result?
+                    .into_iter()
+                    .map(|cert| rustls::Certificate(cert.as_ref().to_vec()))
+                    .collect()
+            }
         };
 
         let mut root_store = rustls::RootCertStore::empty();
@@ -3570,7 +3579,9 @@ mod tests {
             println!("t2text: {:?}", row.try_get::<_, String>(2));
 
             let now: DateTime<Utc> = Utc::now();
-            let now = NaiveDateTime::from_timestamp_micros(now.timestamp_micros()).unwrap();
+            let now = DateTime::from_timestamp_micros(now.timestamp_micros())
+                .unwrap()
+                .naive_utc();
             println!("NOW: {now:?}");
 
             let row = client
@@ -3587,7 +3598,9 @@ mod tests {
             assert_eq!(now, updated_at);
 
             let future: DateTime<Utc> = Utc::now() + Duration::from_secs(1);
-            let future = NaiveDateTime::from_timestamp_micros(future.timestamp_micros()).unwrap();
+            let future = DateTime::from_timestamp_micros(future.timestamp_micros())
+                .unwrap()
+                .naive_utc();
             println!("NOW: {future:?}");
 
             let row = client
@@ -3755,13 +3768,16 @@ mod tests {
             let mut root_cert_store = tokio_rustls::rustls::RootCertStore::empty();
             root_cert_store.add(&rustls::Certificate(certs.ca_cert.serialize_der()?))?;
 
-            let client_cert =
-                rustls_pemfile::certs(&mut BufReader::new(certs.client_cert_signed.as_bytes()))
-                    .map_err(|e| format!("failed to read client cert: {e}"))?;
+            let client_cert = {
+                let certs_result: Result<Vec<_>, _> =
+                    rustls_pemfile::certs(&mut BufReader::new(certs.client_cert_signed.as_bytes()))
+                        .collect();
+                certs_result.map_err(|e| format!("failed to read client cert: {e}"))?
+            };
 
             let client_cert: Vec<rustls::Certificate> = client_cert
                 .iter()
-                .map(|cert| rustls::Certificate(cert.clone()))
+                .map(|cert| rustls::Certificate(cert.as_ref().to_vec()))
                 .collect();
 
             let config = rustls::ClientConfig::builder()

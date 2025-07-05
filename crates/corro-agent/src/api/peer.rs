@@ -139,13 +139,21 @@ async fn build_quinn_server_config(config: &GossipConfig) -> eyre::Result<quinn:
         let key = if tls.key_file.extension().map_or(false, |x| x == "der") {
             rustls::PrivateKey(key)
         } else {
-            let pkcs8 = rustls_pemfile::pkcs8_private_keys(&mut &*key)?;
+            let pkcs8 = {
+                let result: Result<Vec<_>, _> =
+                    rustls_pemfile::pkcs8_private_keys(&mut &*key).collect();
+                result?
+            };
             match pkcs8.into_iter().next() {
-                Some(x) => rustls::PrivateKey(x),
+                Some(x) => rustls::PrivateKey(x.secret_pkcs8_der().to_vec()),
                 None => {
-                    let rsa = rustls_pemfile::rsa_private_keys(&mut &*key)?;
+                    let rsa = {
+                        let result: Result<Vec<_>, _> =
+                            rustls_pemfile::rsa_private_keys(&mut &*key).collect();
+                        result?
+                    };
                     match rsa.into_iter().next() {
-                        Some(x) => rustls::PrivateKey(x),
+                        Some(x) => rustls::PrivateKey(x.secret_pkcs1_der().to_vec()),
                         None => {
                             eyre::bail!("no private keys found");
                         }
@@ -158,10 +166,13 @@ async fn build_quinn_server_config(config: &GossipConfig) -> eyre::Result<quinn:
         let certs = if tls.cert_file.extension().map_or(false, |x| x == "der") {
             vec![rustls::Certificate(certs)]
         } else {
-            rustls_pemfile::certs(&mut &*certs)?
-                .into_iter()
-                .map(rustls::Certificate)
-                .collect()
+            {
+                let result: Result<Vec<_>, _> = rustls_pemfile::certs(&mut &*certs).collect();
+                result?
+            }
+            .into_iter()
+            .map(|x| rustls::Certificate(x.as_ref().to_vec()))
+            .collect()
         };
 
         let server_crypto = rustls::ServerConfig::builder().with_safe_defaults();
@@ -180,10 +191,14 @@ async fn build_quinn_server_config(config: &GossipConfig) -> eyre::Result<quinn:
             let ca_certs = if ca_file.extension().map_or(false, |x| x == "der") {
                 vec![rustls::Certificate(ca_certs)]
             } else {
-                rustls_pemfile::certs(&mut &*ca_certs)?
-                    .into_iter()
-                    .map(rustls::Certificate)
-                    .collect()
+                {
+                    let result: Result<Vec<_>, _> =
+                        rustls_pemfile::certs(&mut &*ca_certs).collect();
+                    result?
+                }
+                .into_iter()
+                .map(|x| rustls::Certificate(x.as_ref().to_vec()))
+                .collect()
             };
 
             let mut root_store = rustls::RootCertStore::empty();
@@ -223,21 +238,27 @@ fn client_cert_auth(
             .read(true)
             .open(&config.cert_file)?,
     );
-    let certs = rustls_pemfile::certs(&mut cert_file)?
-        .into_iter()
-        .map(rustls::Certificate)
-        .collect();
+    let certs = {
+        let result: Result<Vec<_>, _> = rustls_pemfile::certs(&mut cert_file).collect();
+        result?
+    }
+    .into_iter()
+    .map(|x| rustls::Certificate(x.as_ref().to_vec()))
+    .collect();
 
     let mut key_file = std::io::BufReader::new(
         std::fs::OpenOptions::new()
             .read(true)
             .open(&config.key_file)?,
     );
-    let key = rustls_pemfile::pkcs8_private_keys(&mut key_file)?
-        .into_iter()
-        .map(rustls::PrivateKey)
-        .next()
-        .ok_or_else(|| eyre::eyre!("could not find client tls key"))?;
+    let key = {
+        let result: Result<Vec<_>, _> = rustls_pemfile::pkcs8_private_keys(&mut key_file).collect();
+        result?
+    }
+    .into_iter()
+    .map(|x| rustls::PrivateKey(x.secret_pkcs8_der().to_vec()))
+    .next()
+    .ok_or_else(|| eyre::eyre!("could not find client tls key"))?;
 
     Ok((certs, key))
 }
@@ -258,10 +279,14 @@ async fn build_quinn_client_config(config: &GossipConfig) -> eyre::Result<quinn:
             let ca_certs = if ca_file.extension().map_or(false, |x| x == "der") {
                 vec![rustls::Certificate(ca_certs)]
             } else {
-                rustls_pemfile::certs(&mut &*ca_certs)?
-                    .into_iter()
-                    .map(rustls::Certificate)
-                    .collect()
+                {
+                    let result: Result<Vec<_>, _> =
+                        rustls_pemfile::certs(&mut &*ca_certs).collect();
+                    result?
+                }
+                .into_iter()
+                .map(|x| rustls::Certificate(x.as_ref().to_vec()))
+                .collect()
             };
 
             let mut root_store = rustls::RootCertStore::empty();
@@ -939,7 +964,7 @@ async fn process_sync(
 
     drop(job_tx);
 
-    buf.try_collect().await?;
+    buf.try_collect::<()>().await?;
 
     debug!("done processing sync state");
 
@@ -2505,7 +2530,12 @@ mod tests {
 
         assert_eq!(
             client_conn_peer_id[0].0,
-            rustls_pemfile::certs(&mut server_cert_signed_buf)?[0]
+            {
+                let result: Result<Vec<_>, _> =
+                    rustls_pemfile::certs(&mut server_cert_signed_buf).collect();
+                result?
+            }[0]
+            .as_ref()
         );
 
         let server_conn = res.1;
@@ -2521,7 +2551,12 @@ mod tests {
 
         assert_eq!(
             server_conn_peer_id[0].0,
-            rustls_pemfile::certs(&mut client_cert_signed_buf)?[0]
+            {
+                let result: Result<Vec<_>, _> =
+                    rustls_pemfile::certs(&mut client_cert_signed_buf).collect();
+                result?
+            }[0]
+            .as_ref()
         );
 
         Ok(())

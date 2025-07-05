@@ -1470,7 +1470,7 @@ async fn many_small_changes() -> eyre::Result<()> {
                         Ok::<_, eyre::Report>(())
                     }
                 }))
-                .try_collect()
+                .try_collect::<()>()
                 .await?;
 
                 Ok::<_, eyre::Report>(())
@@ -1479,7 +1479,7 @@ async fn many_small_changes() -> eyre::Result<()> {
             Ok::<_, eyre::Report>(())
         }
     }))
-    .try_collect()
+    .try_collect::<()>()
     .await?;
 
     sleep(Duration::from_secs(10)).await;
