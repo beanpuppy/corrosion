@@ -15,6 +15,7 @@ compact_str = { workspace = true }
 config = { workspace = true }
 corro-types = { path = "../corro-types" }
 corro-utils = { path = "../corro-utils" }
+deadpool-sqlite = { workspace = true }
 eyre = { workspace = true }
 foca = { workspace = true }
 futures = { workspace = true }
